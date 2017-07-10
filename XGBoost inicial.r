@@ -126,8 +126,8 @@ print(head(orders_products))
 data <- orders_products %>%
   group_by(user_id, product_id) %>% 
   summarise(
-    #up_orders = n(), seems like an error, the dataset is at product level, not order
-    up_orders = n_distinct(order_number), #same result as above
+    up_orders = n(), #seems like an error, the dataset is at product level, not order
+    #up_orders = n_distinct(order_number), #same result as above
     up_first_order = min(order_number),
     up_last_order = max(order_number),
     up_average_cart_position = mean(add_to_cart_order))
@@ -159,6 +159,8 @@ gc()
 data$aisle <- as.numeric(data$aisle)
 data$department <- as.numeric(data$department)
 
+
+data<- data%>% select(-aisle)
 print(head(data))
 
 
