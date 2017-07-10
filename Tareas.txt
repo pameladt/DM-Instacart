@@ -1,9 +1,8 @@
 1. Recalibrar el threshold: Función para encontrar el mejor threshold de probabilidad (basado en F1)
-2. One hot encoding en R: transformar las variables categoricas a binarias, trasponiendo filas con columnas https://stackoverflow.com/questions/24142576/one-hot-encoding-in-r-categorical-to-dummy-variables
+2. One hot encoding en R: transformar las variables categoricas a binarias, trasponiendo filas como columnas https://stackoverflow.com/questions/24142576/one-hot-encoding-in-r-categorical-to-dummy-variables
 3. nuevas columnas:  
-Product level - '# of distinct buyers', 'ratio of day of week to average prior day of week' and 'ratio of train or test hour of day to average prior hour of day' 
+Product level - 'ratio of day of week to average prior day of week' and 'ratio of train or test hour of day to average prior hour of day' % venta por dia
 User level - Same 2 ratios mentioned above. 
-User-Product level - Same 2 ratios mentioned above.
-Serie de tiempo para la compra? hora del dia, dia de la semana, dia del mes (o un ratio con respecto a la última compra)
+User-Product level - Same 2 ratios mentioned above. % venta por dia
 4. cross validation
 5. bayesian otimization

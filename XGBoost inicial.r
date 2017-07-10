@@ -11,6 +11,7 @@
 library(data.table)
 library(dplyr)
 library(tidyr)
+library(Ckmeans.1d.dp)
 
 
 # Load Data ---------------------------------------------------------------
@@ -36,7 +37,7 @@ products <- products %>%
 rm(aisles, departments)
 
 #print(head(orders_products))
-#print(head(orders))
+print(head(products ))
 
 ordert$user_id <- orders$user_id[match(ordert$order_id, orders$order_id)]
 
@@ -54,7 +55,9 @@ prd <- orders_products %>%
   ungroup() %>%
   group_by(product_id) %>%
   summarise(
+    #prod_mean_days_since_prior = mean(days_since_prior_order, na.rm = T),
     prod_orders = n(),
+    prod_distinct_users = n_distinct(user_id),
     prod_reorders = sum(reordered),
     prod_first_orders = sum(product_time == 1),
     prod_second_orders = sum(product_time == 2)
@@ -67,7 +70,13 @@ prd$prod_reorder_probability <- prd$prod_second_orders / prd$prod_first_orders
 prd$prod_reorder_times <- 1 + prd$prod_reorders / prd$prod_first_orders
 prd$prod_reorder_ratio <- prd$prod_reorders / prd$prod_orders
 
-prd <- prd %>% select(-prod_reorders, -prod_first_orders, -prod_second_orders)
+
+prd <- prd %>% inner_join(products)
+
+prd <- prd %>% select(-prod_reorders, -prod_first_orders, -prod_second_orders, -product_name)
+
+print(head(prd))
+
 
 rm(products)
 gc()
@@ -111,12 +120,14 @@ users <- users %>% inner_join(us)
 rm(us)
 gc()
 
+print(head(orders_products))
 
 # Database ----------------------------------------------------------------
 data <- orders_products %>%
   group_by(user_id, product_id) %>% 
   summarise(
-    up_orders = n(),
+    #up_orders = n(), seems like an error, the dataset is at product level, not order
+    up_orders = n_distinct(order_number), #same result as above
     up_first_order = min(order_number),
     up_last_order = max(order_number),
     up_average_cart_position = mean(add_to_cart_order))
@@ -142,6 +153,13 @@ data <- data %>%
 
 rm(ordert, prd, users)
 gc()
+
+#factor to number for xgBoost
+
+data$aisle <- as.numeric(data$aisle)
+data$department <- as.numeric(data$department)
+
+print(head(data))
 
 
 # Train / Test datasets ---------------------------------------------------
