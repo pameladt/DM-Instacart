@@ -1,19 +1,27 @@
 
-###########################################################################################################
-#
-# Kaggle Instacart competition
-# Fabien Vavrand, June 2017
-# Simple xgboost starter, score 0.3791 on LB
-# Products selection is based on product by product binary classification, with a global threshold (0.21)
-#
-###########################################################################################################
+
+library("xgboost")
+
+archivo_grid    <- "C:/Users/Pamela/Documents/GitHub/DM-Instacart/grid.txt"
+
+archivo_salida  <- "C:/Users/Pamela/Documents/GitHub/DM-Instacart/salida.txt"
+
+archivo_entrada <- "Instacart"
+
+if( !file.exists( archivo_salida) )
+{
+cat( "fecha", "entrada", "algoritmo", "obs", 
+     "eta",  "alpha", "lambda", "gamma",
+     "colsample_bytree", "min_child_weight", "max_depth", "iteracion", "tiempo", "logloss_min",  
+     "\r\n", sep="\t", file=archivo_salida, fill=FALSE, append=FALSE 
+    ) 
+}
+
 
 library(data.table)
 library(dplyr)
 library(tidyr)
-library(Ckmeans.1d.dp)
 library(stringr)
-
 
 # Load Data ---------------------------------------------------------------
 path <- "C:/Users/Pamela/Documents/GitHub/Instacart data"
@@ -35,6 +43,7 @@ products$product_name <- as.factor(products$product_name)
 products <- products %>% 
   inner_join(aisles) %>% inner_join(departments) %>% 
   select(-aisle_id, -department_id)
+
 rm(aisles, departments)
 
 products$perecedero <- ifelse(products$department=="produce", 1, ifelse(products$department=="dairy eggs", 1,0))
@@ -180,64 +189,64 @@ train$reordered[is.na(train$reordered)] <- 0
 
 print(head(train))
 
-
-test <- as.data.frame(data[data$eval_set == "test",])
-test$eval_set <- NULL
-test$user_id <- NULL
-test$reordered <- NULL
-
-print(head(test))
-
-
 rm(data)
 gc()
 
 
-# Model -------------------------------------------------------------------
-library(xgboost)
+#subtrain <- train 
+subtrain <- train %>% sample_frac(0.1)
 
-params <- list(
-  "objective"           = "reg:logistic",
-  "eval_metric"         = "logloss",
-  "eta"                 = 0.1,
-  "max_depth"           = 6,
-  "min_child_weight"    = 10,
-  "gamma"               = 0.70,
-  "subsample"           = 0.76,
-  "colsample_bytree"    = 0.95,
-  "alpha"               = 2e-05,
-  "lambda"              = 10
-)
+nrow(subtrain)
 
-subtrain <- train 
-#subtrain <- train %>% sample_frac(0.1)
-X <- xgb.DMatrix(as.matrix(subtrain %>% select(-reordered)), label = subtrain$reordered)
-model <- xgboost(data = X, params = params, nrounds = 267)
+dtrain <- xgb.DMatrix(as.matrix(subtrain %>% select(-reordered)), label = subtrain$reordered)
 
-importance <- xgb.importance(colnames(X), model = model)
-xgb.ggplot.importance(importance)
+vnround <- 500
 
-rm(X, importance, subtrain)
-gc()
+peta               =  0.1
+palpha             =  2e-05 
+plambda            =  10
+pgamma             =  0.70
+pmin_child_weight  =  10
+pmax_depth         =  6
 
 
-# Apply model -------------------------------------------------------------
-X <- xgb.DMatrix(as.matrix(test %>% select(-order_id, -product_id)))
-test$reordered <- predict(model, X)
+set.seed( 102191  )
 
-test$reordered <- (test$reordered > 0.21) * 1
+t0 =  Sys.time()
+cv = xgb.cv( 
+		data = dtrain,           missing = 0 ,
+                #scale_pos_weight = vscale_pos_weight,
+		stratified = TRUE,       nfold = 5 ,
+		eta = peta, 
+ 		subsample =  1, #0.76, 
+ 		colsample_bytree = 1, #0.95, 
+ 		min_child_weight = pmin_child_weight, 
+ 		max_depth = pmax_depth,
+ 		alpha = palpha, lambda = plambda, gamma = pgamma,
+ 		#objective="multi:softprob",         num_class=2,
+        	#objective="binary:logistic",   
+		objective = "reg:logistic",
+ 		eval_metric = "logloss",            maximize =FALSE,
+                nround= vnround,   early_stopping_rounds = 100,
+                nthread=32
+		)
 
-submission <- test %>%
-  filter(reordered == 1) %>%
-  group_by(order_id) %>%
-  summarise(
-    products = paste(product_id, collapse = " ")
-  )
+t1 = Sys.time()
 
-missing <- data.frame(
-  order_id = unique(test$order_id[!test$order_id %in% submission$order_id]),
-  products = "None"
-)
 
-submission <- submission %>% bind_rows(missing) %>% arrange(order_id)
-write.csv(submission, file = "submit.csv", row.names = F)
+
+
+
+#Comparo
+
+tiempo        <- as.numeric(  t1 - t0, units = "secs")
+logloss_min       <- min( cv$evaluation_log[ , test_logloss_mean] )
+iteracion_max <- which.min(  cv$evaluation_log[ , test_logloss_mean] )
+
+
+cat( format(Sys.time(), "%Y%m%d %H%M%S"), archivo_entrada, "xgboost", "sinpeso",
+     peta,  palpha, plambda, pgamma,
+     1,  pmin_child_weight, pmax_depth, iteracion_max, tiempo, logloss_min,  
+     "\r\n", sep="\t", file=archivo_salida, fill=FALSE, append=TRUE 
+    ) 
+

@@ -4,5 +4,10 @@
 Product level - 'ratio of day of week to average prior day of week' and 'ratio of train or test hour of day to average prior hour of day' % venta por dia
 User level - Same 2 ratios mentioned above. 
 User-Product level - Same 2 ratios mentioned above. % venta por dia
-4. cross validation
+
+Perecedero
+Organico
+
+
+4. cross validation https://www.kaggle.com/ceshine/xgboost-starter-with-5-fold-cv-and-early-stopping/code
 5. bayesian otimization
