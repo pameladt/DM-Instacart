@@ -32,8 +32,12 @@ orders$eval_set <- as.factor(orders$eval_set)
 products$product_name <- as.factor(products$product_name)
 
 products <- products %>% 
-  inner_join(aisles) %>% inner_join(departments) %>% 
+  inner_join(aisles) %>% inner_join(departments) %>%
   select(-aisle_id, -department_id)
+
+products$perecedero <- ifelse(products$department=="produce", 1, ifelse(products$department=="dairy eggs", 1,0))
+
+#summary(products$perecedero)
 rm(aisles, departments)
 
 #print(head(orders_products))

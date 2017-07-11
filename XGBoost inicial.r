@@ -36,6 +36,8 @@ products <- products %>%
   select(-aisle_id, -department_id)
 rm(aisles, departments)
 
+products$perecedero <- ifelse(products$department=="produce", 1, ifelse(products$department=="dairy eggs", 1,0))
+
 #print(head(orders_products))
 print(head(products ))
 
