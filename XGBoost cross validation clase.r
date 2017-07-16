@@ -40,37 +40,7 @@ departments$department <- as.factor(departments$department)
 orders$eval_set <- as.factor(orders$eval_set)
 products$product_name <- as.factor(products$product_name)
 
-products <- products %>% 
-  inner_join(aisles) %>% inner_join(departments) %>% 
-  select(-aisle_id, -department_id)
-
 rm(aisles, departments)
-
-products$perecedero <- ifelse(products$department=="produce", 1, ifelse(products$department=="dairy eggs", 1,0))
-
-products <- products %>% 
-    mutate(organic=ifelse(str_detect(str_to_lower(products$product_name),'organic'),1,0))
-
-
-
-
-#### ONE HOT ENCODING####
-
-#depts <- data.frame( product_id = products$product_id, dpt_ = gsub(" ", "_", products$department) )
-
-#depts_matrix <- ( model.matrix( ~0+product_id+dpt_, data = depts ) )
-
-#df_depts <- data.frame( depts_matrix )
-
-#products <- products %>% inner_join( df_depts ) %>% select (-department)
-
-#rm( depts, depts_matrix, df_depts ) 
-
-#### ONE HOT ENCODING####
-
-
-#print(head(orders_products))
-print(head(products ))
 
 
 ordert$user_id <- orders$user_id[match(ordert$order_id, orders$order_id)]
@@ -89,9 +59,7 @@ prd <- orders_products %>%
   ungroup() %>%
   group_by(product_id) %>%
   summarise(
-    prod_mean_days_since_prior = mean(days_since_prior_order, na.rm = T),
     prod_orders = n(),
-    prod_distinct_users = n_distinct(user_id),
     prod_reorders = sum(reordered),
     prod_first_orders = sum(product_time == 1),
     prod_second_orders = sum(product_time == 2)
@@ -150,8 +118,6 @@ us <- orders %>%
 	   )
 print(head(us))
 
-us$days_since_prior_7 <- ifelse(us$time_since_last_order==7,1,0)
-
 #To train and test data attach the calculus from Prior info
 users <- users %>% inner_join(us)
 
@@ -164,8 +130,7 @@ print(head(orders_products))
 data <- orders_products %>%
   group_by(user_id, product_id) %>% 
   summarise(
-    up_orders = n(), #seems like an error, the dataset is at product level, not order
-    #up_orders = n_distinct(order_number), #same result as above
+    up_orders = n(), 
     up_first_order = min(order_number),
     up_last_order = max(order_number),
     up_average_cart_position = mean(add_to_cart_order))
@@ -182,31 +147,15 @@ data <- data %>%
 data$up_order_rate <- data$up_orders / data$user_orders
 data$up_orders_since_last_order <- data$user_orders - data$up_last_order
 data$up_order_rate_since_first_order <- data$up_orders / (data$user_orders - data$up_first_order + 1)
-
 # # ordenes con el producto/sum(ordenes) desde que empecé a pedir el producto
 
-#agrego el target reordered para train
+#agrega el target reordered para train
 data <- data %>% 
   left_join(ordert %>% select(user_id, product_id, reordered), 
             by = c("user_id", "product_id"))
 
-data$last_purchase_same_day <- ifelse(data$user_orders==data$up_last_order & data$time_since_last_order==0,1,0)
-
-
 rm(ordert, prd, users)
 gc()
-
-
-
-
-#factor to number for xgBoost
-
-data$aisle <- as.numeric(data$aisle)
-data$department <- as.numeric(data$department)
-
-
-#data<- data%>% select(-aisle,-days_since_prior_7)
-print(head(data))
 
 
 # Train / Test datasets ---------------------------------------------------
@@ -223,16 +172,16 @@ rm(data)
 gc()
 
 
-subtrain <- train 
-#subtrain <- train %>% sample_frac(0.3)
+#subtrain <- train 
+subtrain <- train %>% sample_frac(0.1)
 
 nrow(subtrain)
 
 dtrain <- xgb.DMatrix(as.matrix(subtrain %>% select(-reordered)), label = subtrain$reordered)
 
-vnround <- 500
+vnround <- 200
 
-peta               =  0.15
+peta               =  0.1
 palpha             =  2e-05 
 plambda            =  10
 pgamma             =  0.70
@@ -253,9 +202,7 @@ cv = xgb.cv(
  		min_child_weight = pmin_child_weight, 
  		max_depth = pmax_depth,
  		alpha = palpha, lambda = plambda, gamma = pgamma,
- 		#objective="multi:softprob",         num_class=2,
-        	#objective="binary:logistic",   
-		objective = "reg:logistic",
+ 		objective = "reg:logistic",
  		eval_metric = "logloss",            maximize =FALSE,
                 nround= vnround,   early_stopping_rounds = 10,
                 nthread=32
@@ -263,11 +210,6 @@ cv = xgb.cv(
 
 t1 = Sys.time()
 
-
-
-
-
-#Comparo
 
 tiempo        <- as.numeric(  t1 - t0, units = "secs")
 logloss_min       <- min( cv$evaluation_log[ , test_logloss_mean] )

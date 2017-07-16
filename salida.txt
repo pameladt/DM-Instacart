@@ -7,3 +7,10 @@ fecha	entrada	algoritmo	obs	eta	alpha	lambda	gamma	colsample_bytree	min_child_we
 20170711 164313	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	192	603.794	0.2454202	
 20170711 180827	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	267	780.5594	0.2457978	
 20170711 191540	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	251	740.074	0.244513	
+20170711 194005	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	234	695.6368	0.2452656	
+20170711 202057	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	243	711.9715	0.2452056	
+20170711 222816	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	293	961.1299	0.2461222	
+20170711 225207	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	309	1005.334	0.2461152	
+20170712 123347	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	500	5816.016	0.2443036	
+20170712 141344	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	500	4987.932	0.244327	
+20170713 070134	Instacart	xgboost	sinpeso	0.1	2e-05	10	0.7	1	10	6	1000	20137.42	0.2431088	
