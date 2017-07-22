@@ -47,15 +47,31 @@ products <- products %>%
 
 #### ONE HOT ENCODING####
 
-#depts <- data.frame( product_id = products$product_id, dpt_ = gsub(" ", "_", products$department) )
+depts <- data.frame( product_id = products$product_id, dpt_ = gsub(" ", "_", products$department) )
 
-#depts_matrix <- ( model.matrix( ~0+product_id+dpt_, data = depts ) )
+depts_matrix <- ( model.matrix( ~0+product_id+dpt_, data = depts ) )
 
-#df_depts <- data.frame( depts_matrix )
+df_depts <- data.frame( depts_matrix )
 
-#products <- products %>% inner_join( df_depts ) %>% select (-department)
+products <- products %>% inner_join( df_depts ) %>% select (-department)
 
-#rm( depts, depts_matrix, df_depts ) 
+rm( depts, depts_matrix, df_depts ) 
+
+#### ONE HOT ENCODING####
+
+
+
+#### ONE HOT ENCODING####
+
+#aisle <- data.frame( product_id = products$product_id, aisle_ = gsub(" ", "_", products$aisle) )
+
+#aisle_matrix <- ( model.matrix( ~0+product_id+aisle_, data = aisle ) )
+
+#df_aisle <- data.frame( aisle_matrix )
+
+#products <- products %>% inner_join( df_aisle ) %>% select (-aisle)
+
+#rm( aisle, aisle_matrix, df_aisle ) 
 
 #### ONE HOT ENCODING####
 
@@ -69,8 +85,15 @@ ordert$user_id <- orders$user_id[match(ordert$order_id, orders$order_id)]
 orders_products <- orders %>% inner_join(orderp, by = "order_id")
 
 rm(orderp)
-gc()
 
+###new###
+#num_orders <- orders %>%
+#  filter(eval_set == "prior") %>%
+#  summarise(
+#  orders = n())
+#########
+
+gc()
 
 # Products ----------------------------------------------------------------
 prd <- orders_products %>%
@@ -94,7 +117,9 @@ print(head(prd))
 prd$prod_reorder_probability <- prd$prod_second_orders / prd$prod_first_orders
 prd$prod_reorder_times <- 1 + prd$prod_reorders / prd$prod_first_orders
 prd$prod_reorder_ratio <- prd$prod_reorders / prd$prod_orders
-
+###new###
+#prd$prod_order_ratio <- prd$prod_orders / num_orders$orders
+#########
 
 prd <- prd %>% inner_join(products)
 
@@ -103,7 +128,7 @@ prd <- prd %>% select(-prod_reorders, -prod_first_orders, -prod_second_orders, -
 print(head(prd))
 
 
-rm(products)
+rm(products)#,num_orders)
 gc()
 
 # Users -------------------------------------------------------------------
@@ -136,9 +161,28 @@ users$user_average_basket <- users$user_total_products / users$user_orders
 
 us <- orders %>%
   filter(eval_set != "prior") %>%
-  select(user_id, order_id, eval_set,
+  select(user_id, order_id, eval_set, order_dow,
          time_since_last_order = days_since_prior_order
 	   )
+
+us$order_dow <- ifelse(us$order_dow==0, 1, ifelse(us$order_dow==1, 1,0))
+
+#### ONE HOT ENCODING####
+
+#dow <- data.frame( order_id = us$order_id, dow_ = gsub(" ", "_", us$order_dow) )
+
+#dow_matrix <- ( model.matrix( ~0+order_id+dow_, data = dow) )
+
+#df_dow<- data.frame( dow_matrix )
+
+#us <- us %>% inner_join( df_dow) %>% select (-order_dow)
+
+#rm( dow, dow_matrix, df_dow) 
+
+#### ONE HOT ENCODING####
+
+
+
 print(head(us))
 
 us$days_since_prior_7 <- ifelse(us$time_since_last_order==7,1,0)
@@ -159,6 +203,7 @@ data <- orders_products %>%
     #up_orders = n_distinct(order_number), #same result as above
     up_first_order = min(order_number),
     up_last_order = max(order_number),
+
     up_average_cart_position = mean(add_to_cart_order))
 
 rm(orders_products, orders)
@@ -184,7 +229,16 @@ data$up_order_rate <- data$up_orders / data$user_orders
 data$up_orders_since_last_order <- data$user_orders - data$up_last_order
 data$up_order_rate_since_first_order <- data$up_orders / (data$user_orders - data$up_first_order + 1)
 
+###new###
+#data$up_reorder_share <- data$up_order_rate_since_first_order / data$prod_reorder_ratio
+#data$up_reorder_dif <- data$up_order_rate_since_first_order - data$prod_reorder_ratio
+#data$up_order_share <- data$up_order_rate_since_first_order / data$prod_order_ratio
+#########
+
 # # ordenes con el producto/sum(ordenes) desde que empecé a pedir el producto
+
+rm(prd, users)
+
 
 #agrego el target reordered para train
 data <- data %>% 
@@ -194,7 +248,7 @@ data <- data %>%
 data$last_purchase_same_day <- ifelse(data$user_orders==data$up_last_order & data$time_since_last_order==0,1,0)
 
 
-rm(ordert, prd, users)
+rm(users)
 gc()
 
 
@@ -203,10 +257,10 @@ gc()
 #factor to number for xgBoost
 
 data$aisle <- as.numeric(data$aisle)
-data$department <- as.numeric(data$department)
+#data$department <- as.numeric(data$department)
 
 
-#data<- data%>% select(-aisle,-days_since_prior_7)
+#data<- data%>% select(-prod_reorder_ratio)
 print(head(data))
 
 
@@ -249,15 +303,18 @@ params <- list(
   "seed"			= 102191
 )
 
-subtrain <- train 
+subtrain <- train
+rm(train)
 #subtrain <- train %>% sample_frac(0.1)
 X <- xgb.DMatrix(as.matrix(subtrain %>% select(-reordered)), label = subtrain$reordered)
-model <- xgboost(data = X, params = params, nrounds = 500)
+rm(subtrain)
+
+model <- xgboost(data = X, params = params, nrounds = 470)
 
 importance <- xgb.importance(colnames(X), model = model)
 xgb.ggplot.importance(importance)
 
-rm(X, importance, subtrain)
+rm(X, importance)
 gc()
 
 
@@ -280,5 +337,8 @@ missing <- data.frame(
 )
 
 submission <- submission %>% bind_rows(missing) %>% arrange(order_id)
-write.csv(submission, file = "submit_015eta_500_trees.csv", row.names = F)
+write.csv(submission, file = "submit_015eta_470_trees_v4.csv", row.names = F)
+
+rm(test)
+
 

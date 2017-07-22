@@ -11,3 +11,14 @@ Organico
 
 4. cross validation https://www.kaggle.com/ceshine/xgboost-starter-with-5-fold-cv-and-early-stopping/code
 5. bayesian otimization
+
+dow as one hot encoding
+dow 0 1 weekend
+AM/PM
+1-6, 7-12, 13-18, 19-23
+8-18, the rest
+
+
+probar con >= 2 en vez de >2
+entrenar sólo con compras de usuarios en test
+si el usuario está en test y no en train, sacarlo y ponerle None
